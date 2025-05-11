@@ -126,6 +126,7 @@ export async function simulateDelivery(campaignId: string, message: string): Pro
   }
 }
 
+// Modified to provide default messages when Edge Function fails
 export async function generateAIMessages(campaignIntent: string): Promise<string[]> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-messages', {
@@ -136,9 +137,13 @@ export async function generateAIMessages(campaignIntent: string): Promise<string
     return data.messages;
   } catch (error) {
     console.error('Error generating messages:', error);
+    // Return a more comprehensive set of fallback messages
     return [
       `We noticed you've been shopping with us and we'd love to offer you a special discount on your next purchase.`,
-      `As a valued customer, we're excited to share an exclusive offer with you.`
+      `As a valued customer, we're excited to share an exclusive offer with you.`,
+      `Thank you for being a loyal customer! We have a special offer just for you.`,
+      `We appreciate your business and want to reward you with an exclusive deal.`,
+      `Don't miss out on this special offer we've prepared just for you!`
     ];
   }
 }

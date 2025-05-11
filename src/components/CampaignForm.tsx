@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import MessageGenerator from './MessageGenerator';
 import { RuleGroup } from '@/lib/supabase';
 import { createCampaign, estimateAudience, simulateDelivery } from '@/lib/api';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase';
 
 export default function CampaignForm() {
   const navigate = useNavigate();
@@ -58,14 +58,26 @@ export default function CampaignForm() {
       return;
     }
 
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      toast({
+        title: "Authentication error",
+        description: "Please sign in to create a campaign",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Create campaign
+      // Create campaign with actual user ID
       const campaign = await createCampaign({
         name,
         rules_json: JSON.stringify(ruleGroup),
         audience_count: audienceCount,
-        created_by: 'current-user', // This would be the actual user ID in production
+        created_by: user.id, // Use actual user ID instead of hardcoded string
       });
       
       if (campaign) {

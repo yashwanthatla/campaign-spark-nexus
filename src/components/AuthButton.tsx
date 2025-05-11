@@ -29,21 +29,12 @@ export default function AuthButton() {
 
   const handleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: 'demo@example.com',
-        password: 'demo123'
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
       });
 
       if (error) {
-        // If login fails, try to sign up
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: 'demo@example.com',
-          password: 'demo123'
-        });
-
-        if (signUpError) {
-          throw signUpError;
-        }
+        throw error;
       }
     } catch (error: any) {
       toast({

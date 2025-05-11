@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -14,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Campaign, RuleGroup } from '@/lib/supabase';
+import { Campaign, RuleGroup, supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 type CampaignCardProps = {
@@ -23,12 +22,8 @@ type CampaignCardProps = {
 
 export default function CampaignCard({ campaign }: CampaignCardProps) {
   const [ruleText, setRuleText] = useState('');
-  
-  // Generate a random success/failure count for demo purposes
-  // In a real app, this would come from the communication_logs table
-  const audienceCount = campaign.audience_count;
-  const sent = Math.floor(audienceCount * 0.9);
-  const failed = audienceCount - sent;
+  const [deliveryStats, setDeliveryStats] = useState({ sent: 0, failed: 0 });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     // Parse the rules and create a human-readable string
@@ -37,7 +32,6 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
       
       if (ruleGroup.rules.length === 0) {
         setRuleText('No rules defined');
-        return;
       }
       
       const ruleStrings = ruleGroup.rules.map(rule => {
@@ -69,13 +63,34 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
     }
   }, [campaign.rules_json]);
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (campaign.id) {
+        setLoadingStats(true);
+        const { data, error } = await supabase
+          .rpc('get_campaign_stats', { campaign_uuid: campaign.id });
+
+        if (data && !error) {
+          const s = data.find(stat => stat.status === 'SENT')?.count || 0;
+          const f = data.find(stat => stat.status === 'FAILED')?.count || 0;
+          setDeliveryStats({ sent: s, failed: f });
+        } else {
+          console.error('Error fetching campaign stats:', error);
+          setDeliveryStats({ sent: 0, failed: 0 });
+        }
+        setLoadingStats(false);
+      }
+    };
+    fetchStats();
+  }, [campaign.id]);
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">{campaign.name}</CardTitle>
           <Badge variant="outline" className="bg-crm-purple-light text-crm-purple-dark">
-            {audienceCount} recipients
+            {campaign.audience_count} recipients
           </Badge>
         </div>
       </CardHeader>
@@ -100,9 +115,15 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
           </span>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-green-600">{sent} sent</span>
-          <span className="text-xs text-gray-400">•</span>
-          <span className="text-xs text-red-500">{failed} failed</span>
+          {loadingStats ? (
+            <span className="text-xs text-gray-500">Loading stats...</span>
+          ) : (
+            <>
+              <span className="text-xs text-green-600">{deliveryStats.sent} sent</span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-red-500">{deliveryStats.failed} failed</span>
+            </>
+          )}
         </div>
       </CardFooter>
     </Card>

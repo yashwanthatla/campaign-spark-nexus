@@ -103,12 +103,9 @@ export async function simulateDelivery(campaignId: string, message: string): Pro
 
     if (logsError) throw logsError;
 
-    // Get statistics
+    // Get statistics using RPC
     const { data: stats, error: statsError } = await supabase
-      .from('communication_logs')
-      .select('status', { count: 'exact' })
-      .eq('campaign_id', campaignId)
-      .group_by('status');
+      .rpc('get_campaign_stats', { campaign_uuid: campaignId });
 
     if (statsError) throw statsError;
 

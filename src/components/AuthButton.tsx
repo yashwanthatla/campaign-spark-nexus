@@ -1,7 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AuthButton() {
   const [user, setUser] = useState<any>(null);
@@ -28,12 +28,30 @@ export default function AuthButton() {
   }, []);
 
   const handleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'demo@example.com',
+        password: 'demo123'
+      });
+
+      if (error) {
+        // If login fails, try to sign up
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: 'demo@example.com',
+          password: 'demo123'
+        });
+
+        if (signUpError) {
+          throw signUpError;
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Authentication error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -54,7 +72,7 @@ export default function AuthButton() {
 
   return (
     <Button onClick={handleLogin} className="bg-crm-purple hover:bg-crm-purple-dark">
-      Sign In with Google
+      Sign In
     </Button>
   );
 }
